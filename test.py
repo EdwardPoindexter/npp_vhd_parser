@@ -16,6 +16,7 @@ entity my_module is
         -- Triggers and events
         triggin_req_tgl    : in  std_logic; -- titi
         triggin_ack_tgl    : out std_logic; 
+        my_vect            : out std_logic_vector(3 downto 1);
         triggout_req_tgl   : out std_logic  -- tata
     );
 end my_module;
@@ -40,3 +41,8 @@ if __name__ == "__main__":
     print(vhd_parser.paste_as_component(indent))
     print("paste as signal")
     print(vhd_parser.paste_as_signal(indent))
+    print("paste as initializations")
+    print(vhd_parser.paste_as_initializations(indent))
+    print("paste as testbench")
+    print(vhd_parser.paste_as_testbench(indent))
+

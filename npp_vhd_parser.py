@@ -236,6 +236,27 @@ class Ports:
                 name=self.name, type=type_and_sep, comment=self.comment, name_len=name_len)
             return res.strip()
 
+    def paste_as_initialization(self, name_len=30):
+        if len(self.raw_str) == 0:
+            return ""
+        elif self.comment_only:
+            return ""
+        else:
+            if self.mode == "in":
+                # don't init input ports
+                return ""
+            # init output ports only
+            if self.type == 'std_logic':
+                val = "'0'"
+            elif 'std_logic_vector' in self.type:
+                val = "(others => '0')"
+            else:
+                val = '0'
+
+            res = "{name:{name_len}s} <= {val};{eol}".format(
+                name=self.name, name_len=name_len, val=val, eol=os.linesep)
+            return res
+
 
 class VhdParser:
     def __init__(self, input_text=None):
@@ -347,12 +368,12 @@ class VhdParser:
                 keyword = "generic"
             else:
                 keyword = "???"
-            res += "{indent}{keyword}({eol}".format(indent=self.get_indent(1), keyword=keyword, eol=os.linesep)
+            res += "{indent}{keyword}({eol}".format(indent=self.get_indent(0), keyword=keyword, eol=os.linesep)
             for index, port_or_generic in enumerate(my_object):
                 separator = not index == len(my_object) - 1
                 paste_res = port_or_generic.paste_as_entity(separator, name_len)
-                res += "{}{}{}".format(self.get_indent(2), paste_res, os.linesep)
-            res += "{});{}".format(self.get_indent(1), os.linesep)
+                res += "{}{}{}".format(self.get_indent(1), paste_res, os.linesep)
+            res += "{});{}".format(self.get_indent(0), os.linesep)
         return res
 
     def paste_obj_list_as_instance(self, my_object):
@@ -366,15 +387,15 @@ class VhdParser:
                 keyword = "generic map"
             else:
                 keyword = "???"
-            res += "{indent}{keyword}({eol}".format(indent=self.get_indent(1), keyword=keyword, eol=os.linesep)
+            res += "{indent}{keyword}({eol}".format(indent=self.get_indent(0), keyword=keyword, eol=os.linesep)
             for index, port_or_generic in enumerate(my_object):
                 separator = not index == len(my_object) - 1  # always append a separator but not on the last element
                 paste_res = port_or_generic.paste_as_instance(separator, name_len)
-                res += "{}{}{}".format(self.get_indent(2), paste_res, os.linesep)
+                res += "{}{}{}".format(self.get_indent(1), paste_res, os.linesep)
             if isinstance(my_object[0], Ports):
-                res += "{});{}".format(self.get_indent(1), os.linesep)
+                res += "{});{}".format(self.get_indent(0), os.linesep)
             elif isinstance(my_object[0], Generic):
-                res += "{}){}".format(self.get_indent(1), os.linesep)
+                res += "{}){}".format(self.get_indent(0), os.linesep)
 
         return res
 
@@ -393,17 +414,17 @@ class VhdParser:
         name_len = self.find_name_length(my_object)
         if len(my_object):
             if isinstance(my_object[0], Ports):
-                keyword = "ports"
+                keyword = "port"
             elif isinstance(my_object[0], Generic):
                 keyword = "generic"
             else:
                 keyword = "???"
-            res += "{indent}{keyword}({eol}".format(indent=self.get_indent(1), keyword=keyword, eol=os.linesep)
+            res += "{indent}{keyword}({eol}".format(indent=self.get_indent(0), keyword=keyword, eol=os.linesep)
             for index, port_or_generic in enumerate(my_object):
                 separator = not index == len(my_object) - 1  # always append a separator but not on the last element
                 paste_res = port_or_generic.paste_as_component(separator, name_len)
-                res += "{}{}{}".format(self.get_indent(2), paste_res, os.linesep)
-            res += "{});{}".format(self.get_indent(1), os.linesep)
+                res += "{}{}{}".format(self.get_indent(1), paste_res, os.linesep)
+            res += "{});{}".format(self.get_indent(0), os.linesep)
         return res
 
     def paste_as_entity(self, indent=4):
@@ -438,4 +459,42 @@ class VhdParser:
         res = str()
         res += self.paste_obj_list_as_signal(self.generics)
         res += self.paste_obj_list_as_signal(self.ports)
+        return res
+
+    def paste_as_initializations(self, indent=4):
+        self.indent = indent
+        name_len = self.find_name_length(self.ports)
+        res = str()
+        for port in self.ports:
+            res += port.paste_as_initialization(name_len)
+        return res
+
+    def paste_as_testbench(self, indent=4):
+        self.indent = indent
+        res = str()
+        # entity
+        res += "entity {name}_tb is{eol}".format(name=self.entity_name, eol=os.linesep)
+        res += "end enity {name}_tb;{eol}".format(name=self.entity_name, eol=os.linesep)
+        res += os.linesep
+
+        # architecture
+        res += "architecture tb or {name}_tb is{eol}".format(name=self.entity_name, eol=os.linesep)
+
+        res += self.paste_as_component(indent=indent)
+        res += os.linesep
+
+        res += self.paste_as_signal(indent=indent)
+        res += os.linesep
+
+        res += "begin"
+        res += os.linesep
+
+        res += self.paste_as_instance(indent=indent)
+        res += os.linesep
+
+        res += self.paste_as_initializations(indent=indent)
+        res += os.linesep
+
+        res += "end {name}_tb;{eol}".format(name=self.entity_name, eol=os.linesep)
+
         return res
