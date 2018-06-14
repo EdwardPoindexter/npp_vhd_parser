@@ -84,8 +84,8 @@ class Generic:
         else:
             # append the separator after the name
             name_and_sep = self.name + separator_str
-            res ="{name:{name_len}s} => {name_and_sep:30s}{comment}".format(
-                name=self.name, name_and_sep=name_and_sep, comment=self.comment, name_len=name_len)
+            res ="{name:{name_len}s} => {name_and_sep:{name_len_sep}s} {comment}".format(
+                name=self.name, name_and_sep=name_and_sep, comment=self.comment, name_len=name_len, name_len_sep=name_len + 1)
             return res.strip()
 
     def paste_as_component(self, separator, name_len=30):
@@ -200,12 +200,12 @@ class Ports:
         if len(self.raw_str) == 0:
             return ""
         elif self.comment_only:
-            return "{}".format(self.comment)
+            return "{}{}".format(' ' * (name_len + 4 + name_len + 1), self.comment)
         else:
             # append the separator after the name
             name_and_sep = self.name + separator_str
-            res = "{name:{name_len}s} => {name_and_sep:30s}{comment}".format(
-                name=self.name, name_and_sep=name_and_sep, comment=self.comment, name_len=name_len)
+            res = "{name:{len}s} => {name_and_sep:{lenp1}s}{comment}".format(
+                name=self.name, name_and_sep=name_and_sep, comment=self.comment, len=name_len, lenp1=name_len + 1)
             return res.strip()
 
     def paste_as_component(self, separator, name_len=30):
