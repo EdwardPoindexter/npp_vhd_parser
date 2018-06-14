@@ -270,7 +270,7 @@ class VhdParser:
         self.ports = list()
 
         # find entity name
-        reg_exp_glob = r"""entity       \s+     # start of the entity
+        reg_exp_glob = r""".*entity       \s+     # start of the entity
                    (?P<entity_name>\w+) \s+     # name of the entity
                    is                   \s*     #
                    (?P<body>.*)                 # body of the entity

@@ -9,7 +9,11 @@ if __name__ == "__main__":
     
     start = editor.getSelectionStart() 
     stop = editor.getSelectionEnd()
-    input_text = editor.getTextRange(start, stop)
+    if stop == start:
+        # when nothing is selected, select all the text.
+        input_text = editor.getText()
+    else:
+        input_text = editor.getTextRange(start, stop)
 
     console.clear()
     console.show()
