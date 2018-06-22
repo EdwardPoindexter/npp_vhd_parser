@@ -11,7 +11,10 @@ if __name__ == "__main__":
     console.show()
     console.write(repr(vhd_parser))
     console.write("paste as entity")
-    
+
     res = os.linesep
     res += vhd_parser.paste_as_testbench()
     editor.addText(res)
+
+    time.sleep(1)
+    console.hide()

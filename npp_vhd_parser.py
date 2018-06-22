@@ -18,11 +18,12 @@ class Generic:
             self.parse(raw_str)
 
     def parse(self, raw_str):
-        reg_exp = r"""(?P<name>\w+)  \s*     # the generic name
-                  :                  \s*     # a separator
-                 (?P<type>.*)                # the type of generic
-                 \:\=                \s*     # operator :=
-                 (?P<value>[\d\w"]+) \s*     # the value ( digit or word or ") multiple times
+        reg_exp = r"""(?P<name>\w+)    \s*     # the generic name
+                  :                    \s*     # a separator
+                 (?P<type>.*)          \s*     # the type of generic
+                 (                           # optional value of generic
+                 \:\=                  \s*     # operator :=
+                 (?P<value>[\d\w"]+))? \s*      # the value ( digit or word or ") multiple times
                  \;?
         """
         my_reg_exp = re.compile(reg_exp, re.VERBOSE)
@@ -44,7 +45,12 @@ class Generic:
             if result:
                 self.name = result.group("name").strip()
                 self.type = result.group("type").strip()
-                self.value = result.group("value").strip()
+                self.value = result.group("value")
+                if self.value:
+                    self.value = self.value.srip()
+                if self.type.endswith(';'):
+                    self.type = self.type[:-1].strip()
+
             else:
                 Exception("error can't parse generic: {}\n".format(self.raw_str))
 
@@ -65,10 +71,15 @@ class Generic:
         elif self.comment_only:
             return "{}".format(self.comment)
         else:
-            # append the separator after the value
-            value_and_sep = self.value + separator_str
-            res = "{name:{name_len}s} : {type:3s} := {value:30s}{comment}".format(
-                name=self.name, type=self.type, value=value_and_sep, sep=separator_str, comment=self.comment, name_len=name_len)
+            if self.value:
+                # append the separator after the value
+                value_and_sep = self.value + separator_str
+                res = "{name:{name_len}s} : {type:3s} := {value:30s}{comment}".format(
+                    name=self.name, type=self.type, value=value_and_sep, comment=self.comment, name_len=name_len)
+            else:
+                res = "{name:{name_len}s} : {type:3s}{sep}{comment}".format(
+                    name=self.name, type=self.type, sep=separator_str, comment=self.comment,
+                    name_len=name_len)
             return res.strip()
 
     def paste_as_instance(self, separator, name_len=30):
@@ -100,9 +111,14 @@ class Generic:
             return "{}".format(self.comment)
         else:
             # append the separator after the value
-            value_and_sep = self.value + separator_str
-            res = "{name:{name_len}s} : {type:3s} := {value:40s}{comment}".format(
-                name=self.name, type=self.type, value=value_and_sep, sep=separator_str, comment=self.comment, name_len=name_len)
+            if self.value:
+                value_and_sep = self.value + separator_str
+                res = "{name:{name_len}s} : {type:3s} := {value:40s}{comment}".format(
+                    name=self.name, type=self.type, value=value_and_sep, comment=self.comment, name_len=name_len)
+            else:
+                res = "{name:{name_len}s} : {type:3s}{sep} {comment}".format(
+                    name=self.name, type=self.type, sep=separator_str, comment=self.comment,
+                    name_len=name_len)
             return res.strip()
 
     def paste_as_signal(self, name_len=30):
@@ -111,10 +127,14 @@ class Generic:
         elif self.comment_only:
             return "{}".format(self.comment)
         else:
-            # append the separator after the value
-            value_and_sep = self.value + ';'
-            res ="constant {name:{name_len}s} : {type:s} := {value:40s}{comment}".format(
-                name=self.name, type=self.type, value=value_and_sep, comment=self.comment, name_len=name_len)
+            if self.value:
+                # append the separator after the value
+                value_and_sep = self.value + ';'
+                res = "constant {name:{name_len}s} : {type:s} := {value:40s}{comment}".format(
+                    name=self.name, type=self.type, value=value_and_sep, comment=self.comment, name_len=name_len)
+            else:
+                res = "constant {name:{name_len}s} : {type:s};{comment}".format(
+                    name=self.name, type=self.type, comment=self.comment, name_len=name_len)
             return res.strip()
 
 
@@ -131,7 +151,8 @@ class Ports:
             self.parse(raw_str)
 
     def parse(self, raw_str):
-        reg_exp = r"""(?P<name>\w+)                            \s+     # the port name
+        # TODO: add support of initial value (it's optional)
+        reg_exp = r"""(?P<name>\w+)                           \s+     # the port name
                   \:                                          \s*     # a separator
                   (?P<mode>\w+)                               \s+     # the mode
                   (?P<type>.*)                                \s*     # the type
@@ -200,7 +221,7 @@ class Ports:
         if len(self.raw_str) == 0:
             return ""
         elif self.comment_only:
-            return "{}{}".format(' ' * (name_len + 4 + name_len + 1), self.comment)
+            return "{}".format(self.comment)
         else:
             # append the separator after the name
             name_and_sep = self.name + separator_str
@@ -244,6 +265,27 @@ class Ports:
         else:
             if self.mode == "in":
                 # don't init input ports
+                return ""
+            # init output ports only
+            if self.type == 'std_logic':
+                val = "'0'"
+            elif 'std_logic_vector' in self.type:
+                val = "(others => '0')"
+            else:
+                val = '0'
+
+            res = "{name:{name_len}s} <= {val};{eol}".format(
+                name=self.name, name_len=name_len, val=val, eol=os.linesep)
+            return res
+
+    def paste_as_tb_drivers(self, name_len=30):
+        if len(self.raw_str) == 0:
+            return ""
+        elif self.comment_only:
+            return ""
+        else:
+            if self.mode == "out":
+                # don't drive outputs ports on the TestBench
                 return ""
             # init output ports only
             if self.type == 'std_logic':
@@ -338,7 +380,6 @@ class VhdParser:
                         self.ports.append(Ports(str_to_parse))
         else:
             Exception("can't parse the body of the entity")
-
 
     def __repr__(self):
         res = str()
@@ -443,13 +484,13 @@ class VhdParser:
                                                          eol=os.linesep)
         res += self.paste_obj_list_as_component(self.generics)
         res += self.paste_obj_list_as_component(self.ports)
-        res += "{}end {};{}".format(self.get_indent(0), self.entity_name, os.linesep)
+        res += "{}end component {};{}".format(self.get_indent(0), self.entity_name, os.linesep)
         return res
 
     def paste_as_instance(self, indent=4):
         self.indent = indent
         res = str()
-        res += "{indent}{name}_inst:{name}{eol}".format(indent=self.get_indent(0), name=self.entity_name, eol=os.linesep)
+        res += "{indent}{name}_inst : {name}{eol}".format(indent=self.get_indent(0), name=self.entity_name, eol=os.linesep)
         res += self.paste_obj_list_as_instance(self.generics)
         res += self.paste_obj_list_as_instance(self.ports)
         return res
@@ -467,6 +508,14 @@ class VhdParser:
         res = str()
         for port in self.ports:
             res += port.paste_as_initialization(name_len)
+        return res
+
+    def paste_as_tb_drivers(self, indent=4):
+        self.indent = indent
+        name_len = self.find_name_length(self.ports)
+        res = str()
+        for port in self.ports:
+            res += port.paste_as_tb_drivers(name_len)
         return res
 
     def paste_as_testbench(self, indent=4):
@@ -492,7 +541,7 @@ class VhdParser:
         res += self.paste_as_instance(indent=indent)
         res += os.linesep
 
-        res += self.paste_as_initializations(indent=indent)
+        res += self.paste_as_tb_drivers(indent=indent)
         res += os.linesep
 
         res += "end {name}_tb;{eol}".format(name=self.entity_name, eol=os.linesep)

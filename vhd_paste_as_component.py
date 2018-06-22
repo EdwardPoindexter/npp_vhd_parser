@@ -15,3 +15,6 @@ if __name__ == "__main__":
     res = os.linesep
     res += vhd_parser.paste_as_component()
     editor.addText(res)
+
+    time.sleep(1)
+    console.hide()

@@ -2,6 +2,7 @@
 #-*- coding: utf-8 -*-
 
 import os
+import time
 from npp_vhd_parser import VhdParser
 
 
@@ -15,3 +16,6 @@ if __name__ == "__main__":
     res = os.linesep
     res += vhd_parser.paste_as_instance()
     editor.addText(res)
+
+    time.sleep(1)
+    console.hide()

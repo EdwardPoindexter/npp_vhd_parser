@@ -6,7 +6,9 @@ from npp_vhd_parser import VhdParser
 entity_example='''
 entity my_module is
     generic(
-        my_freq       : positive := 10; -- rrr
+        my_freq_1     : positive ; -- rrr
+        my_freq_2     : positive; -- rrr
+        my_freq_3     : positive := 10; -- rrr
         my_val        : positive := 10 -- eeee
     );
     port(
