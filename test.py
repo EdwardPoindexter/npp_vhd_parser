@@ -47,4 +47,6 @@ if __name__ == "__main__":
     print(vhd_parser.paste_as_initializations(indent))
     print("paste as testbench")
     print(vhd_parser.paste_as_testbench(indent))
+    print("paste as fake par")
+    print(vhd_parser.paste_as_fake_par(indent))
 

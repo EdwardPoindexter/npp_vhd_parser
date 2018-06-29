@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
-
+import time
 from npp_vhd_parser import VhdParser
 
 vhd_parser = VhdParser()
@@ -19,3 +19,6 @@ if __name__ == "__main__":
     console.show()
     vhd_parser.parse(input_text)
     console.write(repr(vhd_parser))
+    
+    time.sleep(1)
+    console.hide()

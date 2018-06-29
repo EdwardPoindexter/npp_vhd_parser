@@ -2,6 +2,7 @@
 #-*- coding: utf-8 -*-
 
 import os
+import time
 from npp_vhd_parser import VhdParser
 
 
