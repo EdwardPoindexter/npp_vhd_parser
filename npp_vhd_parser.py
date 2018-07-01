@@ -210,7 +210,7 @@ class Ports:
             # append the separator after the value
             type_and_sep = self.type + separator_str
             res = "{name:{name_len}s} : {mode:3s} {type:40s}{comment}".format(
-                name=self.name, mode=self.mode, type=type_and_sep, sep=separator_str, comment=self.comment, name_len=name_len)
+                name=self.name, mode=self.mode, type=type_and_sep, comment=self.comment, name_len=name_len)
             return res.strip()
 
     def paste_as_instance(self, separator, name_len=30, prefix=''):
@@ -314,8 +314,15 @@ class Ports:
                 res = "{name_and_prefix:{name_len}s} <= {name};".format(
                     name_and_prefix=name_and_prefix, name=self.name, name_len=(name_len+len(prefix)), prefix=prefix)
 
-
             return res
+
+    def is_clk(self):
+        if ("clk" in self.name):
+            return True
+        
+    def is_reset(self):
+        if ("rst" in self.name or "reset" in self.name):
+            return True
 
 
 class VhdParser:
@@ -451,15 +458,17 @@ class VhdParser:
                 keyword = "generic map"
             else:
                 keyword = "???"
-            res += "{indent}{keyword}({eol}".format(indent=self.get_indent(0), keyword=keyword, eol=os.linesep)
+            res += "{indent}{keyword}({eol}".format(indent=self.get_indent(1), keyword=keyword, eol=os.linesep)
             for index, port_or_generic in enumerate(my_object):
                 separator = not index == len(my_object) - 1  # always append a separator but not on the last element
                 paste_res = port_or_generic.paste_as_instance(separator, name_len, prefix)
-                res += "{}{}{}".format(self.get_indent(1), paste_res, os.linesep)
+                res += "{}{}{}".format(self.get_indent(2), paste_res, os.linesep)
+            
             if isinstance(my_object[0], Ports):
-                res += "{});{}".format(self.get_indent(0), os.linesep)
+                res += "{});{}".format(self.get_indent(1), os.linesep)
+
             elif isinstance(my_object[0], Generic):
-                res += "{}){}".format(self.get_indent(0), os.linesep)
+                res += "{}){}".format(self.get_indent(1), os.linesep)
 
         return res
 

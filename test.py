@@ -3,7 +3,7 @@
 
 import re
 from npp_vhd_parser import VhdParser
-entity_example='''
+entity_example = '''
 entity my_module is
     generic(
         my_freq_1     : positive ; -- rrr
