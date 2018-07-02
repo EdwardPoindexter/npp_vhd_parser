@@ -56,17 +56,20 @@ Here is the input vhdl parsed wy the python script
 ```vhd
 entity my_module is
     generic(
-        my_freq       : positive := 10; -- rrr
+        my_freq_1     : positive; -- rrr
+        my_freq_2     : positive; -- rrr
+        my_freq_3     : positive := 10; -- rrr
         my_val        : positive := 10 -- eeee
     );
     port(
         -- systeme
-        clk                : in  std_logic; --module clock
-        rstn               : in  std_logic; --reset
+        clk_apb            : in  std_logic; --module clock
+        rstn_apb           : in  std_logic; --low active asynchronous reset with deassertion synchronous to clk
         -- Triggers and events
-        sig_in_req        : in  std_logic; -- titi
-        sig_in_ack        : out std_logic; 
-        sig_out_req       : out std_logic  -- tata
+        triggin_req_tgl    : in  std_logic; -- titi
+        triggin_ack_tgl    : out std_logic; 
+        my_vect            : out std_logic_vector(3 downto 1);
+        triggout_req_tgl   : out std_logic  -- tata
     );
 end my_module;
 ```
@@ -76,20 +79,24 @@ end my_module;
 ### Generated VHD paste as instance
 
 ```vhd
-my_module_inst:my_module
+my_module_inst : my_module
     generic map(
-        my_freq => my_freq,                      -- rrr
-        my_val  => my_val                        -- eeee
+        my_freq_1 => my_freq_1, -- rrr
+        my_freq_2 => my_freq_2, -- rrr
+        my_freq_3 => my_freq_3, -- rrr
+        my_val    => my_val     -- eeee
     )
     port map(
         -- systeme
-        clk          => clk,                          --module clock
-        rstn         => rstn,                         --reset
+        clk_apb          => clk_apb,         --module clock
+        rstn_apb         => rstn_apb,        --low active asynchronous reset with deassertion synchronous to clk
         -- Triggers and events
-        sig_in_req  => sig_in_req,                  -- titi
-        sig_in_ack  => sig_in_ack,
-        sig_out_req => sig_out_req                  -- tata
+        triggin_req_tgl  => triggin_req_tgl, -- titi
+        triggin_ack_tgl  => triggin_ack_tgl,
+        my_vect          => my_vect,
+        triggout_req_tgl => triggout_req_tgl -- tata
     );
+
 ```
 
 ###  Generated VHD paste as component
@@ -97,19 +104,22 @@ my_module_inst:my_module
 ```vhd
 component my_module is
     generic(
-        my_freq : positive := 10;                                     -- rrr
-        my_val  : positive := 10                                      -- eeee
+        my_freq_1 : positive; -- rrr
+        my_freq_2 : positive; -- rrr
+        my_freq_3 : positive := 10; -- rrr
+        my_val    : positive := 10  -- eeee
     );
-    ports(
+    port(
         -- systeme
-        clk          : in  std_logic;                                                  --module clock
-        rstn         : in  std_logic;                                                  --reset
+        clk_apb          : in  std_logic;                                                  --module clock
+        rstn_apb         : in  std_logic;                                                  --low active asynchronous reset with deassertion synchronous to clk
         -- Triggers and events
-        sig_in_req  : in  std_logic;                                                  -- titi
-        sig_in_ack  : out std_logic;
-        sig_out_req : out std_logic                                                   -- tata
+        triggin_req_tgl  : in  std_logic;                                                  -- titi
+        triggin_ack_tgl  : out std_logic;
+        my_vect          : out std_logic_vector(3 downto 1);
+        triggout_req_tgl : out std_logic                                                   -- tata
     );
-end my_module;
+end component my_module;
 ```
 
 ### Generated VHD paste as entity
@@ -117,17 +127,225 @@ end my_module;
 ```vhd
 entity my_module is
     generic(
-        my_freq : positive := 10;                           -- rrr
-        my_val  : positive := 10                            -- eeee
+        my_freq_1 : positive;-- rrr
+        my_freq_2 : positive;-- rrr
+        my_freq_3 : positive := 10;-- rrr
+        my_val    : positive := 10 -- eeee
     );
-    ports(
+    port(
         -- systeme
-        clk          : in  std_logic;                              --module clock
-        rstn         : in  std_logic;                              --reset
+        clk_apb          : in  std_logic;                              --module clock
+        rstn_apb         : in  std_logic;                              --low active asynchronous reset with deassertion synchronous to clk
         -- Triggers and events
-        sig_in_req  : in  std_logic;                              -- titi
-        sig_in_ack  : out std_logic;
-        sig_out_req : out std_logic                               -- tata
+        triggin_req_tgl  : in  std_logic;                              -- titi
+        triggin_ack_tgl  : out std_logic;
+        my_vect          : out std_logic_vector(3 downto 1);
+        triggout_req_tgl : out std_logic                               -- tata
     );
 end my_module;
+
 ```
+
+
+### Generated VHD paste as signal
+
+```vhd
+constant my_freq_1 : positive;-- rrr
+constant my_freq_2 : positive;-- rrr
+constant my_freq_3 : positive := 10;-- rrr
+constant my_val    : positive := 10;-- eeee
+-- systeme
+signal clk_apb          : std_logic;                                                  --module clock
+signal rstn_apb         : std_logic;                                                  --low active asynchronous reset with deassertion synchronous to clk
+-- Triggers and events
+signal triggin_req_tgl  : std_logic;                                                  -- titi
+signal triggin_ack_tgl  : std_logic;
+signal my_vect          : std_logic_vector(3 downto 1);
+signal triggout_req_tgl : std_logic;                                                  -- tata
+
+```
+
+
+### Generated VHD paste as initializations
+
+```vhd
+triggin_ack_tgl                <= '0';
+
+my_vect                        <= (others => '0');
+
+triggout_req_tgl               <= '0';
+
+```
+
+
+### Generated VHD paste as testbench
+
+```vhd
+entity my_module_tb is
+end entity my_module_tb;
+
+
+architecture tb of my_module_tb is
+component my_module is
+    generic(
+        my_freq_1 : positive; -- rrr
+        my_freq_2 : positive; -- rrr
+        my_freq_3 : positive := 10; -- rrr
+        my_val    : positive := 10  -- eeee
+    );
+    port(
+        -- systeme
+        clk_apb          : in  std_logic;                                                  --module clock
+        rstn_apb         : in  std_logic;                                                  --low active asynchronous reset with deassertion synchronous to clk
+        -- Triggers and events
+        triggin_req_tgl  : in  std_logic;                                                  -- titi
+        triggin_ack_tgl  : out std_logic;
+        my_vect          : out std_logic_vector(3 downto 1);
+        triggout_req_tgl : out std_logic                                                   -- tata
+    );
+end component my_module;
+
+
+constant my_freq_1 : positive;-- rrr
+constant my_freq_2 : positive;-- rrr
+constant my_freq_3 : positive := 10;-- rrr
+constant my_val    : positive := 10;-- eeee
+-- systeme
+signal clk_apb          : std_logic;                                                  --module clock
+signal rstn_apb         : std_logic;                                                  --low active asynchronous reset with deassertion synchronous to clk
+-- Triggers and events
+signal triggin_req_tgl  : std_logic;                                                  -- titi
+signal triggin_ack_tgl  : std_logic;
+signal my_vect          : std_logic_vector(3 downto 1);
+signal triggout_req_tgl : std_logic;                                                  -- tata
+
+
+begin
+
+
+my_module_inst : my_module
+    generic map(
+        my_freq_1 => my_freq_1, -- rrr
+        my_freq_2 => my_freq_2, -- rrr
+        my_freq_3 => my_freq_3, -- rrr
+        my_val    => my_val     -- eeee
+    )
+    port map(
+        -- systeme
+        clk_apb          => clk_apb,         --module clock
+        rstn_apb         => rstn_apb,        --low active asynchronous reset with deassertion synchronous to clk
+        -- Triggers and events
+        triggin_req_tgl  => triggin_req_tgl, -- titi
+        triggin_ack_tgl  => triggin_ack_tgl,
+        my_vect          => my_vect,
+        triggout_req_tgl => triggout_req_tgl -- tata
+    );
+
+
+p_clk_apb: process
+begin
+    clk_apb <= '1';
+    wait for 5ns;
+    clk_apb <= '0';
+    wait for 5ns;
+end process p_clk_apb;
+
+
+rstn_apb <= '0', '1' after 50 ns;
+
+
+triggin_req_tgl  <= '0';
+
+
+end tb;
+```
+
+
+### Generated VHD paste as Fake PAR
+
+```vhd
+entity my_module_par is
+    generic(
+        my_freq_1 : positive;-- rrr
+        my_freq_2 : positive;-- rrr
+        my_freq_3 : positive := 10;-- rrr
+        my_val    : positive := 10 -- eeee
+    );
+    port(
+        -- systeme
+        clk_apb          : in  std_logic;                              --module clock
+        rstn_apb         : in  std_logic;                              --low active asynchronous reset with deassertion synchronous to clk
+        -- Triggers and events
+        triggin_req_tgl  : in  std_logic;                              -- titi
+        triggin_ack_tgl  : out std_logic;
+        my_vect          : out std_logic_vector(3 downto 1);
+        triggout_req_tgl : out std_logic                               -- tata
+    );
+end my_module_par;
+architecture rtl of my_module_par is
+component my_module is
+    generic(
+        my_freq_1 : positive; -- rrr
+        my_freq_2 : positive; -- rrr
+        my_freq_3 : positive := 10; -- rrr
+        my_val    : positive := 10  -- eeee
+    );
+    port(
+        -- systeme
+        clk_apb          : in  std_logic;                                                  --module clock
+        rstn_apb         : in  std_logic;                                                  --low active asynchronous reset with deassertion synchronous to clk
+        -- Triggers and events
+        triggin_req_tgl  : in  std_logic;                                                  -- titi
+        triggin_ack_tgl  : out std_logic;
+        my_vect          : out std_logic_vector(3 downto 1);
+        triggout_req_tgl : out std_logic                                                   -- tata
+    );
+end component my_module;
+
+
+-- systeme
+-- Triggers and events
+signal triggin_req_tgl_i  : std_logic;                                                  -- titi
+signal triggin_ack_tgl_i  : std_logic;
+signal my_vect_i          : std_logic_vector(3 downto 1);
+signal triggout_req_tgl_i : std_logic;                                                  -- tata
+
+
+begin
+
+
+my_module_inst : my_module
+    generic map(
+        my_freq_1 => my_freq_1, -- rrr
+        my_freq_2 => my_freq_2, -- rrr
+        my_freq_3 => my_freq_3, -- rrr
+        my_val    => my_val     -- eeee
+    )
+    port map(
+        -- systeme
+        clk_apb          => clk_apb,         --module clock
+        rstn_apb         => rstn_apb,        --low active asynchronous reset with deassertion synchronous to clk
+        -- Triggers and events
+        triggin_req_tgl  => triggin_req_tgl_i,-- titi
+        triggin_ack_tgl  => triggin_ack_tgl_i,
+        my_vect          => my_vect_i,
+        triggout_req_tgl => triggout_req_tgl_i -- tata
+    );
+
+
+process(clk_apb)
+begin
+    if (rising_edge(clk_apb)) then
+        -- systeme
+        -- Triggers and events
+        triggin_req_tgl_i    <= triggin_req_tgl;
+        triggin_ack_tgl      <= triggin_ack_tgl_i;
+        my_vect              <= my_vect_i;
+        triggout_req_tgl     <= triggout_req_tgl_i;
+    end if;
+end process;
+
+
+end rtl;
+```
+

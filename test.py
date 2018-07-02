@@ -6,6 +6,7 @@ from npp_vhd_parser import VhdParser
 entity_example = '''
 entity my_module is
     generic(
+        ----- my generics header comment
         my_freq_1     : positive ; -- rrr
         my_freq_2     : positive; -- rrr
         my_freq_3     : positive := 10; -- rrr
@@ -13,8 +14,8 @@ entity my_module is
     );
     port(
         -- systeme
-        clk                : in  std_logic; --module clock
-        rstn               : in  std_logic; --low active asynchronous reset with deassertion synchronous to clk
+        clk_apb            : in  std_logic; --module clock
+        rstn_apb           : in  std_logic; --low active asynchronous reset with deassertion synchronous to clk
         -- Triggers and events
         triggin_req_tgl    : in  std_logic; -- titi
         triggin_ack_tgl    : out std_logic; 
@@ -34,6 +35,8 @@ if __name__ == "__main__":
     input_text = entity_example
 
     vhd_parser.parse(input_text)
+    print("vhd_parser str=")
+    print(vhd_parser)
     indent = 4
     print("paste as entity")
     print(vhd_parser.paste_as_entity(indent))

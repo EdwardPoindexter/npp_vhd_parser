@@ -138,7 +138,7 @@ class Generic:
             return res.strip()
 
 
-class Ports:
+class Port:
     def __init__(self, raw_str):
         self.raw_str = raw_str.strip()
         self.name = str()
@@ -146,9 +146,13 @@ class Ports:
         self.type = str()
         self.comment = str()
         self.comment_only = False
+        self.indent = 4
 
         if len(raw_str):
             self.parse(raw_str)
+
+    def get_indent(self, level):
+        return self.indent * level * " "
 
     def parse(self, raw_str):
         # TODO: add support of initial value (it's optional)
@@ -296,9 +300,24 @@ class Ports:
             else:
                 val = '0'
 
-            res = "{name:{name_len}s} <= {val};{eol}".format(
-                name=self.name, name_len=name_len, val=val, eol=os.linesep)
+            res = "{name:{name_len}s} <= {val};".format(name=self.name, name_len=name_len, val=val)
             return res
+
+    def paste_as_tb_clock(self, name_len=30):
+        res = list()
+        res.append("{indent}p_{name:s}: process".format(indent=self.get_indent(0), name=self.name))
+        res.append("{indent}begin".format(indent=self.get_indent(0)))
+        res.append("{indent}{name} <= '1';".format(indent=self.get_indent(1),name=self.name))
+        res.append("{indent}wait for 5ns;".format(indent=self.get_indent(1)))
+        res.append("{indent}{name} <= '0';".format(indent=self.get_indent(1), name=self.name))
+        res.append("{indent}wait for 5ns;".format(indent=self.get_indent(1)))
+        res.append("{indent}end process p_{name:s};".format(indent=self.get_indent(0), name=self.name))
+
+        return os.linesep.join(res)
+
+    def paste_as_tb_reset(self, name_len=30):
+        res = "{name:s} <= '0', '1' after 50 ns;".format(name=self.name)
+        return res
 
     def paste_as_fake_par(self, name_len=30, prefix=''):
         if len(self.raw_str) == 0:
@@ -325,20 +344,241 @@ class Ports:
             return True
 
 
+class Elements:
+    '''
+    elements can describe a list of ports or a list of generics
+    '''
+    def __init__(self):
+        self.elements = list()
+        self.indent = 4
+
+    def get_indent(self, level):
+        return self.indent * level * " "
+
+    def get_nbr_elt(self):
+        res = 0
+        for elt in self.elements:
+            if not elt.comment_only:
+                res += 1
+        return res
+
+    def find_name_length(self, prefix=''):
+        max_length = 0
+        for elt in self.elements:
+            name = elt.get_name()
+            name_length = len(name)
+            max_length = max(max_length, name_length)
+        return max_length
+
+    def paste_as_signal(self, prefix=''):
+        name_len = self.find_name_length()
+        res = list()
+        if len(self.elements):
+            for index, element in enumerate(self.elements):
+                paste_res = element.paste_as_signal(name_len, prefix)
+                res.append("{}{}".format(self.get_indent(0), paste_res))
+        return os.linesep.join(res)
+
+
+class Generics(Elements):
+
+    def append(self, elt):
+        self.elements.append(elt)
+
+    def paste_as_component(self):
+        res = list()
+        name_len = self.find_name_length()
+        res.append("{indent}generic(".format(indent=self.get_indent(1)))
+        for index, elt in enumerate(self.elements):
+            separator = not index == len(self.elements) - 1  # always append a separator but not on the last element
+            paste_res = elt.paste_as_component(separator, name_len)
+            res.append("{}{}".format(self.get_indent(2), paste_res))
+        res.append("{});".format(self.get_indent(1)))
+        return os.linesep.join(res)
+
+    def paste_as_entity(self):
+        res = list()
+        name_len = self.find_name_length()
+        res.append("{indent}generic(".format(indent=self.get_indent(1)))
+        for index, elt in enumerate(self.elements):
+            separator = not index == len(self.elements) - 1  # always append a separator but not on the last element
+            paste_res = elt.paste_as_entity(separator, name_len)
+            res.append("{}{}".format(self.get_indent(2), paste_res))
+        res.append("{});".format(self.get_indent(1)))
+        return os.linesep.join(res)
+
+    def paste_as_instance(self, prefix=''):
+        res = list()
+        name_len = self.find_name_length()
+        if len(self.elements):
+            res.append("{indent}generic map(".format(indent=self.get_indent(1)))
+            for index, elt in enumerate(self.elements):
+                separator = not index == len(self.elements) - 1  # always append a separator but not on the last element
+                paste_res = elt.paste_as_instance(separator, name_len)
+                res.append("{}{}".format(self.get_indent(2), paste_res))
+            res.append("{})".format(self.get_indent(1)))
+        return os.linesep.join(res)
+
+    def paste_as_instance_fake_par(self):
+        return self.paste_as_instance()
+
+
+class Ports(Elements):
+
+    def append(self, elt):
+        self.elements.append(elt)
+
+    def get_elements_but_clk_rst(self):
+        for elt in self.elements:
+            if not elt.is_clk() and not elt.is_reset():
+                yield elt
+
+    def get_elements_clk(self):
+        for elt in self.elements:
+            if elt.is_clk():
+                yield elt
+
+    def get_clk_name(self):
+        res = str()
+        # return the name of the last clock of the module
+        for elt in self.get_elements_clk():
+            res = elt.get_name()
+        return res
+
+    def get_elements_reset(self):
+        for elt in self.elements:
+            if elt.is_reset():
+                yield elt
+
+    def paste_as_component(self):
+        res = list()
+        name_len = self.find_name_length()
+        res.append("{indent}port(".format(indent=self.get_indent(1)))
+        for index, elt in enumerate(self.elements):
+            separator = not index == len(self.elements) - 1  # always append a separator but not on the last element
+            paste_res = elt.paste_as_component(separator, name_len)
+            res.append("{}{}".format(self.get_indent(2), paste_res))
+        res.append("{});".format(self.get_indent(1)))
+        return os.linesep.join(res)
+
+    def paste_as_entity(self):
+        res = list()
+        name_len = self.find_name_length()
+        res.append("{indent}port(".format(indent=self.get_indent(1)))
+        for index, elt in enumerate(self.elements):
+            separator = not index == len(self.elements) - 1  # always append a separator but not on the last element
+            paste_res = elt.paste_as_entity(separator, name_len)
+            res.append("{}{}".format(self.get_indent(2), paste_res))
+        res.append("{});".format(self.get_indent(1)))
+        return os.linesep.join(res)
+
+    def paste_as_instance(self, prefix=''):
+        res = list()
+        name_len = self.find_name_length()
+        if len(self.elements):
+            res.append("{indent}port map(".format(indent=self.get_indent(1)))
+            for index, elt in enumerate(self.elements):
+                separator = not index == len(self.elements) - 1  # always append a separator but not on the last element
+                paste_res = elt.paste_as_instance(separator, name_len)
+                res.append("{}{}".format(self.get_indent(2), paste_res))
+            res.append("{});".format(self.get_indent(1)))
+        return os.linesep.join(res)
+
+    def paste_as_instance_fake_par(self):
+        res = list()
+        name_len = self.find_name_length()
+        if len(self.elements):
+            res.append("{indent}port map(".format(indent=self.get_indent(1)))
+            for index, elt in enumerate(self.elements):
+                separator = not index == len(self.elements) - 1  # always append a separator but not on the last element
+                if elt.is_clk() or elt.is_reset():
+                    # don't use the prefix for signal clock or reset
+                    paste_res = elt.paste_as_instance(separator, name_len, '')
+                else:
+                    paste_res = elt.paste_as_instance(separator, name_len, '_i')
+                res.append("{}{}".format(self.get_indent(2), paste_res))
+            res.append("{});".format(self.get_indent(1)))
+        return os.linesep.join(res)
+
+    def paste_as_initialization(self):
+        res = list()
+        name_len = self.find_name_length()
+        for port in self.elements:
+            res.append(port.paste_as_initialization())
+        return os.linesep.join(res)
+
+    def paste_as_signal_fake_par(self):
+        name_len = self.find_name_length() + len("_i")
+        res = list()
+        if len(self.elements):
+            for index, port in enumerate(self.elements):
+                if not port.is_clk() and not port.is_reset():
+                    paste_res = port.paste_as_signal(name_len, '_i')
+                    res.append("{}{}".format(self.get_indent(0), paste_res))
+        return os.linesep.join(res)
+
+    def paste_as_initialization_fake_par(self):
+        res = list()
+        name_len = self.find_name_length() + len("_i")
+        for port in self.elements:
+            if not port.is_clk() and not port.is_reset():
+                res.append("{}{}".format(self.get_indent(2), port.paste_as_fake_par(name_len, '_i')))
+        return os.linesep.join(res)
+
+    def paste_as_tb_clock_drivers(self, indent):
+        self.indent = indent
+        name_len = self.find_name_length()
+        res = list()
+        for port in self.get_elements_clk():
+            elt = port.paste_as_tb_clock(name_len)
+            if len(elt.strip()):
+                res.append(elt)
+        return os.linesep.join(res)
+
+    def paste_as_tb_reset_driver(self, indent):
+        self.indent = indent
+        name_len = self.find_name_length()
+        res = list()
+        for port in self.get_elements_reset():
+            elt = port.paste_as_tb_reset(name_len)
+            if len(elt.strip()):
+                res.append(elt)
+        return os.linesep.join(res)
+
+    def paste_as_tb_signal_driver(self, indent):
+        self.indent = indent
+        name_len = self.find_name_length()
+        res = list()
+        for port in self.get_elements_but_clk_rst():
+            elt = port.paste_as_tb_drivers(name_len)
+            if len(elt.strip()):
+                res.append(elt)
+        return os.linesep.join(res)
+    
+    def paste_as_tb_driver(self, indent):
+        res = list()
+        res.append(self.paste_as_tb_clock_drivers(indent))
+        res.append(os.linesep)
+        res.append(self.paste_as_tb_reset_driver(indent))
+        res.append(os.linesep)
+        res.append(self.paste_as_tb_signal_driver(indent))
+        return os.linesep.join(res)
+
+
+
 class VhdParser:
     def __init__(self, input_text=None):
 
         self.input_text = str()
-        self.generics_str = str()
-        self.generics = list()
-        self.ports_str = str()
-        self.ports = list()
-        self.indent = str()
         self.entity_name = str()
+        
         self.generics_str = str()
-        self.generics = list()
+        self.generics_parsed = Generics()
+
         self.ports_str = str()
-        self.ports = list()
+        self.ports_parsed = Ports()
+
+        self.indent = str()
 
         if input_text:
             self.parse(input_text)
@@ -358,9 +598,8 @@ class VhdParser:
 
         self.entity_name = str()
         self.generics_str = str()
-        self.generics = list()
         self.ports_str = str()
-        self.ports = list()
+        self.ports_parsed = Ports()
 
         # find entity name
         reg_exp_glob = r""".*entity       \s+     # start of the entity
@@ -401,220 +640,137 @@ class VhdParser:
                 for elt in self.generics_str.splitlines():
                     str_to_parse = elt.strip()
                     if len(str_to_parse):
-                        self.generics.append(Generic(str_to_parse))
+                        generic_parsed = Generic(str_to_parse)
+                        self.generics_parsed.append(generic_parsed)
 
             if self.ports_str:
                 for elt in self.ports_str.splitlines():
                     str_to_parse = elt.strip()
                     if len(str_to_parse):
-                        self.ports.append(Ports(str_to_parse))
+                        port_parsed = Port(str_to_parse)
+                        self.ports_parsed.append(port_parsed)
         else:
             Exception("can't parse the body of the entity")
 
     def __repr__(self):
         res = str()
         res += "entity:       {}\n".format(self.entity_name)
-        res += "nb generics : {}\n".format(len(self.generics))
-        res += "nb ports :    {}\n".format(len(self.ports))
+        res += "nb generics : {}\n".format(self.generics_parsed.get_nbr_elt())
+        res += "nb ports :    {}\n".format(self.ports_parsed.get_nbr_elt())
         return res
 
     def get_indent(self, level):
         return self.indent * level * " "
 
-    def find_name_length(self, my_object, prefix=''):
-        max_length = 0
-        for elt in my_object:
-            name_length = len(elt.get_name(prefix))
-            if name_length > max_length:
-                max_length = name_length
-        return max_length
-
-    def paste_obj_list_as_entity(self, my_object):
-        res = str()
-        name_len = self.find_name_length(my_object)
-        if len(my_object):
-            if isinstance(my_object[0], Ports):
-                keyword = "port"
-            elif isinstance(my_object[0], Generic):
-                keyword = "generic"
-            else:
-                keyword = "???"
-            res += "{indent}{keyword}({eol}".format(indent=self.get_indent(1), keyword=keyword, eol=os.linesep)
-            for index, port_or_generic in enumerate(my_object):
-                separator = not index == len(my_object) - 1
-                paste_res = port_or_generic.paste_as_entity(separator, name_len)
-                res += "{}{}{}".format(self.get_indent(2), paste_res, os.linesep)
-            res += "{});{}".format(self.get_indent(1), os.linesep)
-        return res
-
-    def paste_obj_list_as_instance(self, my_object, prefix):
-        res = str()
-        name_len = self.find_name_length(my_object)
-
-        if len(my_object):
-            if isinstance(my_object[0], Ports):
-                keyword = "port map"
-            elif isinstance(my_object[0], Generic):
-                keyword = "generic map"
-            else:
-                keyword = "???"
-            res += "{indent}{keyword}({eol}".format(indent=self.get_indent(1), keyword=keyword, eol=os.linesep)
-            for index, port_or_generic in enumerate(my_object):
-                separator = not index == len(my_object) - 1  # always append a separator but not on the last element
-                paste_res = port_or_generic.paste_as_instance(separator, name_len, prefix)
-                res += "{}{}{}".format(self.get_indent(2), paste_res, os.linesep)
-            
-            if isinstance(my_object[0], Ports):
-                res += "{});{}".format(self.get_indent(1), os.linesep)
-
-            elif isinstance(my_object[0], Generic):
-                res += "{}){}".format(self.get_indent(1), os.linesep)
-
-        return res
-
-    def paste_obj_list_as_signal(self, my_object, prefix=''):
-        res = str()
-        name_len = self.find_name_length(my_object)
-        if len(my_object):
-            for index, port_or_generic in enumerate(my_object):
-                paste_res = port_or_generic.paste_as_signal(name_len, prefix)
-                res += "{}{}{}".format(self.get_indent(0), paste_res, os.linesep)
-
-        return res
-
-    def paste_obj_list_as_component(self, my_object):
-        res = str()
-        name_len = self.find_name_length(my_object)
-        if len(my_object):
-            if isinstance(my_object[0], Ports):
-                keyword = "port"
-            elif isinstance(my_object[0], Generic):
-                keyword = "generic"
-            else:
-                keyword = "???"
-            res += "{indent}{keyword}({eol}".format(indent=self.get_indent(1), keyword=keyword, eol=os.linesep)
-            for index, port_or_generic in enumerate(my_object):
-                separator = not index == len(my_object) - 1  # always append a separator but not on the last element
-                paste_res = port_or_generic.paste_as_component(separator, name_len)
-                res += "{}{}{}".format(self.get_indent(2), paste_res, os.linesep)
-            res += "{});{}".format(self.get_indent(1), os.linesep)
-        return res
-
     def paste_as_entity(self, indent=4):
         self.indent = indent
-        res = str()
-        res += "{indent}entity {name} is{eol}".format(indent=self.get_indent(0), name=self.entity_name, eol=os.linesep)
-        res += self.paste_obj_list_as_entity(self.generics)
-        res += self.paste_obj_list_as_entity(self.ports)
-        res += "{}end {};{}".format(self.get_indent(0), self.entity_name, os.linesep)
-        return res
+        res = list()
+        res.append("{indent}entity {name} is".format(indent=self.get_indent(0), name=self.entity_name))
+        res.append(self.generics_parsed.paste_as_entity())
+        res.append(self.ports_parsed.paste_as_entity())
+        res.append("{}end {};".format(self.get_indent(0), self.entity_name))
+        return os.linesep.join(res)
 
     def paste_as_component(self, indent=4):
         self.indent = indent
-        res = str()
-        res += "{indent}component {name} is{eol}".format(indent=self.get_indent(0), name=self.entity_name,
-                                                         eol=os.linesep)
-        res += self.paste_obj_list_as_component(self.generics)
-        res += self.paste_obj_list_as_component(self.ports)
-        res += "{}end component {};{}".format(self.get_indent(0), self.entity_name, os.linesep)
-        return res
+        res = list()
+        res.append("{indent}component {name} is".format(indent=self.get_indent(0), name=self.entity_name))
+        res.append(self.generics_parsed.paste_as_component())
+        res.append(self.ports_parsed.paste_as_component())
+        res.append("{}end component {};".format(self.get_indent(0), self.entity_name))
+        return os.linesep.join(res)
 
     def paste_as_instance(self, indent=4, prefix=''):
         self.indent = indent
-        res = str()
-        res += "{indent}{name}_inst : {name}{eol}".format(indent=self.get_indent(0), name=self.entity_name, eol=os.linesep)
-        res += self.paste_obj_list_as_instance(self.generics, prefix)
-        res += self.paste_obj_list_as_instance(self.ports, prefix)
-        return res
+        res = list()
+        res.append("{indent}{name}_inst : {name}".format(indent=self.get_indent(0), name=self.entity_name))
+        res.append(self.generics_parsed.paste_as_instance())
+        res.append(self.ports_parsed.paste_as_instance())
+        return os.linesep.join(res)
 
     def paste_as_signal(self, indent=4, prefix=''):
         self.indent = indent
-        res = str()
-        res += self.paste_obj_list_as_signal(self.generics, prefix)
-        res += self.paste_obj_list_as_signal(self.ports, prefix)
-        return res
+        res = list()
+        res.append(self.generics_parsed.paste_as_signal())
+        res.append(self.ports_parsed.paste_as_signal())
+        return os.linesep.join(res)
 
     def paste_as_initializations(self, indent=4):
         self.indent = indent
-        name_len = self.find_name_length(self.ports)
-        res = str()
-        for port in self.ports:
-            res += port.paste_as_initialization(name_len)
-        return res
-
-    def paste_as_tb_drivers(self, indent=4):
-        self.indent = indent
-        name_len = self.find_name_length(self.ports)
-        res = str()
-        for port in self.ports:
-            res += port.paste_as_tb_drivers(name_len)
+        res = self.ports_parsed.paste_as_initialization()
         return res
 
     def paste_as_testbench(self, indent=4):
         self.indent = indent
-        res = str()
+        res = list()
         # entity
-        res += "entity {name}_tb is{eol}".format(name=self.entity_name, eol=os.linesep)
-        res += "end entity {name}_tb;{eol}".format(name=self.entity_name, eol=os.linesep)
-        res += os.linesep
+        res.append("entity {name}_tb is".format(name=self.entity_name))
+        res.append("end entity {name}_tb;".format(name=self.entity_name))
+        res.append(os.linesep)
 
         # architecture
-        res += "architecture tb of {name}_tb is{eol}".format(name=self.entity_name, eol=os.linesep)
+        res.append("architecture tb of {name}_tb is".format(name=self.entity_name))
 
-        res += self.paste_as_component(indent=indent)
-        res += os.linesep
+        res.append(self.paste_as_component(indent=indent))
+        res.append(os.linesep)
 
-        res += self.paste_as_signal(indent=indent)
-        res += os.linesep
+        res.append(self.paste_as_signal(indent=indent))
+        res.append(os.linesep)
 
-        res += "begin"
-        res += os.linesep
+        res.append("begin")
+        res.append(os.linesep)
 
-        res += self.paste_as_instance(indent=indent)
-        res += os.linesep
+        res.append(self.paste_as_instance(indent=indent))
+        res.append(os.linesep)
 
-        res += self.paste_as_tb_drivers(indent=indent)
-        res += os.linesep
+        res.append(self.ports_parsed.paste_as_tb_driver(indent=indent))
+        res.append(os.linesep)
 
-        res += "end tb;{eol}".format(eol=os.linesep)
+        res.append("end tb;")
+        res.append(os.linesep)
 
-        return res
+        return os.linesep.join(res)
+
+    def paste_as_fake_par_instance(self, indent=4, prefix=''):
+        self.indent = indent
+        res = list()
+        res.append("{indent}{name}_inst : {name}".format(indent=self.get_indent(0), name=self.entity_name))
+        res.append(self.generics_parsed.paste_as_instance())
+        res.append(self.ports_parsed.paste_as_instance_fake_par())
+        return os.linesep.join(res)
 
     def paste_as_fake_par(self, indent=4):
-        res = str()
+        res = list()
         self.entity_name += "_par"
-        res += self.paste_as_entity(indent=indent)
+        res.append(self.paste_as_entity(indent=indent))
         # architecture
-        res += "architecture rtl of {name} is{eol}".format(name=self.entity_name, eol=os.linesep)
+        res.append("architecture rtl of {name} is".format(name=self.entity_name))
         self.entity_name = self.entity_name[:-4]
 
-        res += self.paste_as_component(indent=indent)
-        res += os.linesep
+        res.append(self.paste_as_component(indent=indent))
+        res.append(os.linesep)
 
-        res += self.paste_obj_list_as_signal(self.ports, prefix='_i')
-        res += os.linesep
+        res.append(self.ports_parsed.paste_as_signal_fake_par())
+        res.append(os.linesep)
 
-        res += "begin"
-        res += os.linesep
+        res.append("begin")
+        res.append(os.linesep)
 
-        res += self.paste_as_instance(indent=indent, prefix='_i')
-        res += os.linesep
+        res.append(self.paste_as_fake_par_instance(indent=indent, prefix='_i'))
+        res.append(os.linesep)
 
-        res += "{indent}process(clk){eol}".format(indent=self.get_indent(0), eol=os.linesep)
-        res += "{indent}begin{eol}".format(indent=self.get_indent(0), eol=os.linesep)
-        res += "{indent}if (rising_edge(clk)) then{eol}".format(indent=self.get_indent(1), eol=os.linesep)
+        clock_name = self.ports_parsed.get_clk_name()
+        res.append("{indent}process({clk})".format(indent=self.get_indent(0), clk=clock_name))
+        res.append("{indent}begin".format(indent=self.get_indent(0)))
+        res.append("{indent}if (rising_edge({clk})) then".format(indent=self.get_indent(1), clk=clock_name))
+        res.append(self.ports_parsed.paste_as_initialization_fake_par())
 
-        port_max_len = self.find_name_length(self.ports, prefix='_i')
-        for port in self.ports:
-            port_pasted = port.paste_as_fake_par(port_max_len, '_i')
-            res += "{indent}{port_pasted}{eol}".format(indent=self.get_indent(2), port_pasted=port_pasted, eol=os.linesep)
+        res.append("{indent}end if;".format(indent=self.get_indent(1)))
+        res.append("{indent}end process;".format(indent=self.get_indent(0)))
 
-        res += "{indent}end if;{eol}".format(indent=self.get_indent(1), eol=os.linesep)
-        res += "{indent}end process;{eol}".format(indent=self.get_indent(0), eol=os.linesep)
+        res.append(os.linesep)
 
-        res += os.linesep
+        res.append("end rtl;")
 
-        res += "end rtl;{eol}".format(eol=os.linesep)
-
-        return res
+        return os.linesep.join(res)
 
