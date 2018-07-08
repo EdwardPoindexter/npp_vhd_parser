@@ -388,34 +388,48 @@ class Generics(Elements):
     def paste_as_component(self):
         res = list()
         name_len = self.find_name_length()
-        res.append("{indent}generic(".format(indent=self.get_indent(1)))
-        for index, elt in enumerate(self.elements):
-            separator = not index == len(self.elements) - 1  # always append a separator but not on the last element
-            paste_res = elt.paste_as_component(separator, name_len)
-            res.append("{}{}".format(self.get_indent(2), paste_res))
-        res.append("{});".format(self.get_indent(1)))
+        generics_len = self.get_nbr_elt()
+        generic_index = 0
+        if generics_len:
+            res.append("{indent}generic(".format(indent=self.get_indent(1)))
+            for index, elt in enumerate(self.elements):
+                separator = not generic_index == generics_len - 1  # always append a separator but not on the last element
+                paste_res = elt.paste_as_component(separator, name_len)
+                res.append("{}{}".format(self.get_indent(2), paste_res))
+                if not elt.comment_only:
+                    generic_index += 1
+            res.append("{});".format(self.get_indent(1)))
         return os.linesep.join(res)
 
     def paste_as_entity(self):
         res = list()
         name_len = self.find_name_length()
-        res.append("{indent}generic(".format(indent=self.get_indent(1)))
-        for index, elt in enumerate(self.elements):
-            separator = not index == len(self.elements) - 1  # always append a separator but not on the last element
-            paste_res = elt.paste_as_entity(separator, name_len)
-            res.append("{}{}".format(self.get_indent(2), paste_res))
-        res.append("{});".format(self.get_indent(1)))
+        generics_len = self.get_nbr_elt()
+        generic_index = 0
+        if generics_len:
+            res.append("{indent}generic(".format(indent=self.get_indent(1)))
+            for index, elt in enumerate(self.elements):
+                separator = not generic_index == generics_len - 1  # always append a separator but not on the last element
+                paste_res = elt.paste_as_entity(separator, name_len)
+                res.append("{}{}".format(self.get_indent(2), paste_res))
+                if not elt.comment_only:
+                    generic_index += 1
+            res.append("{});".format(self.get_indent(1)))
         return os.linesep.join(res)
 
     def paste_as_instance(self, prefix=''):
         res = list()
         name_len = self.find_name_length()
-        if len(self.elements):
+        generics_len = self.get_nbr_elt()
+        generic_index = 0
+        if generics_len:
             res.append("{indent}generic map(".format(indent=self.get_indent(1)))
             for index, elt in enumerate(self.elements):
-                separator = not index == len(self.elements) - 1  # always append a separator but not on the last element
+                separator = not generic_index == generics_len - 1  # always append a separator but not on the last element
                 paste_res = elt.paste_as_instance(separator, name_len)
                 res.append("{}{}".format(self.get_indent(2), paste_res))
+                if not elt.comment_only:
+                    generic_index += 1
             res.append("{})".format(self.get_indent(1)))
         return os.linesep.join(res)
 
@@ -454,49 +468,67 @@ class Ports(Elements):
         res = list()
         name_len = self.find_name_length()
         res.append("{indent}port(".format(indent=self.get_indent(1)))
-        for index, elt in enumerate(self.elements):
-            separator = not index == len(self.elements) - 1  # always append a separator but not on the last element
-            paste_res = elt.paste_as_component(separator, name_len)
-            res.append("{}{}".format(self.get_indent(2), paste_res))
-        res.append("{});".format(self.get_indent(1)))
+        ports_len = self.get_nbr_elt()
+        port_index = 0
+        if ports_len:
+            for index, elt in enumerate(self.elements):
+                separator = not port_index == ports_len - 1 # always append a separator but not on the last element
+                paste_res = elt.paste_as_component(separator, name_len)
+                res.append("{}{}".format(self.get_indent(2), paste_res))
+                if not elt.comment_only:
+                    port_index += 1
+            res.append("{});".format(self.get_indent(1)))
         return os.linesep.join(res)
 
     def paste_as_entity(self):
         res = list()
         name_len = self.find_name_length()
-        res.append("{indent}port(".format(indent=self.get_indent(1)))
-        for index, elt in enumerate(self.elements):
-            separator = not index == len(self.elements) - 1  # always append a separator but not on the last element
-            paste_res = elt.paste_as_entity(separator, name_len)
-            res.append("{}{}".format(self.get_indent(2), paste_res))
-        res.append("{});".format(self.get_indent(1)))
+        ports_len = self.get_nbr_elt()
+        port_index = 0
+        if ports_len:
+            res.append("{indent}port(".format(indent=self.get_indent(1)))
+            for index, elt in enumerate(self.elements):
+                separator = not port_index == ports_len - 1 # always append a separator but not on the last element
+                paste_res = elt.paste_as_entity(separator, name_len)
+                res.append("{}{}".format(self.get_indent(2), paste_res))
+                if not elt.comment_only:
+                    port_index += 1
+            res.append("{});".format(self.get_indent(1)))
         return os.linesep.join(res)
 
     def paste_as_instance(self, prefix=''):
         res = list()
         name_len = self.find_name_length()
-        if len(self.elements):
+        ports_len = self.get_nbr_elt()
+        port_index = 0
+        if ports_len:
             res.append("{indent}port map(".format(indent=self.get_indent(1)))
             for index, elt in enumerate(self.elements):
-                separator = not index == len(self.elements) - 1  # always append a separator but not on the last element
+                separator = not port_index == ports_len - 1  # always append a separator but not on the last element
                 paste_res = elt.paste_as_instance(separator, name_len)
                 res.append("{}{}".format(self.get_indent(2), paste_res))
+                if not elt.comment_only:
+                    port_index += 1
             res.append("{});".format(self.get_indent(1)))
         return os.linesep.join(res)
 
     def paste_as_instance_fake_par(self):
         res = list()
         name_len = self.find_name_length()
-        if len(self.elements):
+        ports_len = self.get_nbr_elt()
+        port_index = 0
+        if ports_len:
             res.append("{indent}port map(".format(indent=self.get_indent(1)))
             for index, elt in enumerate(self.elements):
-                separator = not index == len(self.elements) - 1  # always append a separator but not on the last element
+                separator = not port_index == ports_len - 1  # always append a separator but not on the last element
                 if elt.is_clk() or elt.is_reset():
                     # don't use the prefix for signal clock or reset
                     paste_res = elt.paste_as_instance(separator, name_len, '')
                 else:
                     paste_res = elt.paste_as_instance(separator, name_len, '_i')
                 res.append("{}{}".format(self.get_indent(2), paste_res))
+                if not elt.comment_only:
+                    port_index += 1
             res.append("{});".format(self.get_indent(1)))
         return os.linesep.join(res)
 
@@ -607,6 +639,7 @@ class VhdParser:
                    is                   \s*     #
                    (?P<body>.*)                 # body of the entity
                    end                  \s+     # end of the entity
+                   (entity              \s+)?   # entity optional word
                    (?P=entity_name)     \s*     # repeat the name of the entity
                    ;                            # end of the entity
                    """
