@@ -744,20 +744,24 @@ class VhdParser:
         # architecture
         res.append("architecture tb of {name}_tb is".format(name=self.entity_name))
 
-        res.append(self.paste_as_component(indent=indent))
-        res.append(os.linesep)
-
-        res.append(self.paste_as_signal(indent=indent))
-        res.append(os.linesep)
+        arch_body = list()
+        arch_body.extend(self.paste_as_component(indent=indent).splitlines())
+        arch_body.append(os.linesep)
+        arch_body.extend(self.paste_as_signal(indent=indent).splitlines())
+        arch_body.append(os.linesep)
+        for elt in arch_body:
+            res.append("{}{}".format(indent*' ', elt))
 
         res.append("begin")
         res.append(os.linesep)
 
-        res.append(self.paste_as_instance(indent=indent))
-        res.append(os.linesep)
-
-        res.append(self.ports_parsed.paste_as_tb_driver(indent=indent))
-        res.append(os.linesep)
+        arch_body = list()
+        arch_body.extend(self.paste_as_instance(indent=indent).splitlines())
+        arch_body.append(os.linesep)
+        arch_body.extend(self.ports_parsed.paste_as_tb_driver(indent=indent).splitlines())
+        arch_body.append(os.linesep)
+        for elt in arch_body:
+            res.append("{}{}".format(indent*' ', elt).rstrip())
 
         res.append("end tb;")
         res.append(os.linesep)
@@ -780,28 +784,33 @@ class VhdParser:
         res.append("architecture rtl of {name} is".format(name=self.entity_name))
         self.entity_name = self.entity_name[:-4]
 
-        res.append(self.paste_as_component(indent=indent))
-        res.append(os.linesep)
-
-        res.append(self.ports_parsed.paste_as_signal_fake_par())
-        res.append(os.linesep)
+        body = list()
+        body.extend(self.paste_as_component(indent=indent).splitlines())
+        body.append(os.linesep)
+        body.extend(self.ports_parsed.paste_as_signal_fake_par().splitlines())
+        body.append(os.linesep)
+        for elt in body:
+            res.append("{}{}".format(indent * ' ', elt).rstrip())
 
         res.append("begin")
         res.append(os.linesep)
 
-        res.append(self.paste_as_fake_par_instance(indent=indent, prefix='_i'))
-        res.append(os.linesep)
+        body = list()
+        body.extend(self.paste_as_fake_par_instance(indent=indent, prefix='_i').splitlines())
+        body.append(os.linesep)
 
         clock_name = self.ports_parsed.get_clk_name()
-        res.append("{indent}process({clk})".format(indent=self.get_indent(0), clk=clock_name))
-        res.append("{indent}begin".format(indent=self.get_indent(0)))
-        res.append("{indent}if (rising_edge({clk})) then".format(indent=self.get_indent(1), clk=clock_name))
-        res.append(self.ports_parsed.paste_as_initialization_fake_par())
+        body.append("{indent}process({clk})".format(indent=self.get_indent(0), clk=clock_name))
+        body.append("{indent}begin".format(indent=self.get_indent(0)))
+        body.append("{indent}if (rising_edge({clk})) then".format(indent=self.get_indent(1), clk=clock_name))
+        body.append(self.ports_parsed.paste_as_initialization_fake_par())
 
-        res.append("{indent}end if;".format(indent=self.get_indent(1)))
-        res.append("{indent}end process;".format(indent=self.get_indent(0)))
+        body.append("{indent}end if;".format(indent=self.get_indent(1)))
+        body.append("{indent}end process;".format(indent=self.get_indent(0)))
 
-        res.append(os.linesep)
+        body.append(os.linesep)
+        for elt in body:
+            res.append("{}{}".format(indent * ' ', elt).rstrip())
 
         res.append("end rtl;")
 
