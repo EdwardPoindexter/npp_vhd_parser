@@ -861,11 +861,11 @@ class Record:
         else:
             sep = " "
         if self.is_array():
-            val = "{}.{}'length - 1".format(constant_init_name, self.name)
+            val = "{}.{}'length".format(constant_init_name, self.name)
         else:
             val = "1"
 
-        res = "{val:{val_length}s} {sep} -- {comment}".format(val=val, val_length=name_len + 11 + len(constant_init_name) + 1, sep=sep, comment=self.raw_str)
+        res = "{val:{val_length}s} {sep} -- {comment}".format(val=val, val_length=name_len + 7 + len(constant_init_name) + 1, sep=sep, comment=self.raw_str)
 
         return res
 
